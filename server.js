@@ -1,6 +1,6 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
-const { Parser } = require("json2csv");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,19 +71,26 @@ app.delete("/delete/:id", (req, res) => {
     });
 });
 
-// DOWNLOAD CSV (With Computed Hours + 12hr Format)
+// DOWNLOAD CSV (12hr format + computed hours)
 app.get("/download", (req, res) => {
     db.all("SELECT * FROM logs", [], (err, rows) => {
         if (err) return res.status(500).json(err);
 
-        const formattedRows = rows.map(row => {
+        let csv = "ID,Name,Date,Time In,Time Out,Total Hours,Late\n";
+
+        rows.forEach(row => {
 
             let totalHours = 0;
+            let late = "No";
 
             if (row.time_in && row.time_out) {
                 const inTime = new Date(`1970-01-01T${row.time_in}:00`);
                 const outTime = new Date(`1970-01-01T${row.time_out}:00`);
                 totalHours = ((outTime - inTime) / (1000 * 60 * 60)).toFixed(2);
+            }
+
+            if (row.time_in && row.time_in > "08:00") {
+                late = "Yes";
             }
 
             function to12Hour(time) {
@@ -96,24 +103,15 @@ app.get("/download", (req, res) => {
                 return `${hours}:${minutes} ${ampm}`;
             }
 
-            return {
-                id: row.id,
-                name: row.name,
-                date: row.date,
-                time_in: to12Hour(row.time_in),
-                time_out: to12Hour(row.time_out),
-                total_hours: totalHours
-            };
+            csv += `${row.id},${row.name},${row.date},${to12Hour(row.time_in)},${to12Hour(row.time_out)},${totalHours},${late}\n`;
         });
-
-        const parser = new Parser({
-            fields: ["id", "name", "date", "time_in", "time_out", "total_hours"]
-        });
-
-        const csv = parser.parse(formattedRows);
 
         res.header("Content-Type", "text/csv");
         res.attachment("time_records.csv");
         res.send(csv);
     });
+});
+
+app.listen(PORT, () => {
+    console.log("Server running on port " + PORT);
 });
