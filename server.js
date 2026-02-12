@@ -60,7 +60,24 @@ app.get("/logs", (req, res) => {
     });
 });
 
-// Required for Render
+// ✅ DOWNLOAD CSV
+app.get("/download", (req, res) => {
+    db.all("SELECT * FROM logs ORDER BY id ASC", [], (err, rows) => {
+        if (err) return res.status(500).json(err);
+
+        let csv = "Name,Device,Date,Time In,Time Out\n";
+
+        rows.forEach(row => {
+            csv += `${row.name},${row.device},${row.date},${row.time_in || ""},${row.time_out || ""}\n`;
+        });
+
+        res.header("Content-Type", "text/csv");
+        res.attachment("time_records.csv");
+        res.send(csv);
+    });
+});
+
+// Render Port
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
