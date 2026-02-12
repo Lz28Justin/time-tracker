@@ -6,14 +6,15 @@
         body {
             font-family: Arial;
             margin: 0;
-            background: #f4f6f9;
+            background: #0f0f0f;
+            color: white;
         }
 
         header {
-            background: #1e3c72;
-            color: white;
+            background: #000;
             padding: 20px;
             text-align: center;
+            border-bottom: 2px solid #1e90ff;
         }
 
         .container {
@@ -30,69 +31,72 @@
         }
 
         .card {
-            background: white;
+            background: #1a1a1a;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             text-align: center;
+            border: 1px solid #333;
         }
 
         .card h2 {
-            margin: 10px 0;
-            color: #1e3c72;
+            color: #1e90ff;
         }
 
         .clock-box {
-            background: white;
+            background: #1a1a1a;
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 30px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             text-align: center;
+            border: 1px solid #333;
         }
 
         input {
             padding: 10px;
             margin: 10px;
             width: 200px;
+            background: #000;
+            color: white;
+            border: 1px solid #444;
         }
 
         button {
             padding: 10px 20px;
             margin: 10px;
-            background: #1e3c72;
+            background: #1e90ff;
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
         }
 
+        button:hover {
+            background: #0d6efd;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background: #1a1a1a;
         }
 
         th, td {
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #333;
             text-align: center;
         }
 
         th {
-            background: #1e3c72;
-            color: white;
+            background: #000;
+            color: #1e90ff;
         }
-
-        /* Calendar */
 
         .calendar {
             margin-top: 30px;
-            background: white;
+            background: #1a1a1a;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 1px solid #333;
         }
 
         .calendar-grid {
@@ -105,12 +109,11 @@
             padding: 15px;
             text-align: center;
             border-radius: 6px;
-            background: #eee;
+            background: #222;
         }
 
-        .present { background: #4CAF50; color: white; }
-        .absent { background: #e74c3c; color: white; }
-        .late { background: orange; color: white; }
+        .present { background: #28a745; }
+        .late { background: orange; }
 
         .calendar-header {
             font-weight: bold;
@@ -156,7 +159,6 @@
                 <th>Date</th>
                 <th>Time In</th>
                 <th>Time Out</th>
-                <th>Status</th>
                 <th>Hours</th>
                 <th>Late?</th>
                 <th>Action</th>
@@ -190,15 +192,13 @@ async function clockIn(){
     const name = document.getElementById("name").value;
     if(!name) return alert("Enter your name");
 
-    await fetch("/add", {
+    await fetch("/clockin", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
             name,
             date:getCurrentDate(),
-            timeIn:getCurrentTime(),
-            timeOut:"",
-            status:"Present"
+            time:getCurrentTime()
         })
     });
 
@@ -214,8 +214,7 @@ async function clockOut(){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
             name,
-            date:getCurrentDate(),
-            timeOut:getCurrentTime()
+            time:getCurrentTime()
         })
     });
 
@@ -223,7 +222,7 @@ async function clockOut(){
 }
 
 async function loadRecords(){
-    const res = await fetch("/records");
+    const res = await fetch("/logs");
     const data = await res.json();
 
     const table = document.getElementById("records");
@@ -234,19 +233,25 @@ async function loadRecords(){
 
     data.forEach(record => {
 
-        totalHours += record.hours || 0;
+        let hours = 0;
 
-        let isLate = record.timeIn > "08:00";
+        if(record.time_in && record.time_out){
+            const inTime = new Date(`1970-01-01T${record.time_in}:00`);
+            const outTime = new Date(`1970-01-01T${record.time_out}:00`);
+            hours = (outTime - inTime) / (1000*60*60);
+            totalHours += hours;
+        }
+
+        let isLate = record.time_in > "08:00";
         if(isLate) lateCount++;
 
         table.innerHTML += `
             <tr>
                 <td>${record.name}</td>
                 <td>${record.date}</td>
-                <td>${record.timeIn || "-"}</td>
-                <td>${record.timeOut || "-"}</td>
-                <td>${record.status}</td>
-                <td>${record.hours || 0}</td>
+                <td>${record.time_in || "-"}</td>
+                <td>${record.time_out || "-"}</td>
+                <td>${hours.toFixed(2)}</td>
                 <td>${isLate ? "Yes" : "No"}</td>
                 <td><button onclick="deleteRecord(${record.id})">Delete</button></td>
             </tr>
@@ -261,7 +266,6 @@ async function loadRecords(){
 }
 
 function buildCalendar(data){
-
     const calendar = document.getElementById("calendarBody");
     calendar.innerHTML = "";
 
@@ -272,23 +276,17 @@ function buildCalendar(data){
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    for(let i=0; i<firstDay; i++){
+    for(let i=0;i<firstDay;i++){
         calendar.innerHTML += `<div></div>`;
     }
 
     for(let day=1; day<=daysInMonth; day++){
-
         const fullDate = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         let record = data.find(r => r.date === fullDate);
 
         let className = "calendar-day";
-
         if(record){
-            if(record.timeIn > "08:00"){
-                className += " late";
-            } else {
-                className += " present";
-            }
+            className += record.time_in > "08:00" ? " late" : " present";
         }
 
         calendar.innerHTML += `<div class="${className}">${day}</div>`;
