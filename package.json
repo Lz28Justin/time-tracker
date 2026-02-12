@@ -1,14 +1,14 @@
 {
-  "name": "time-tracker",
+  "name": "timekeeping-system",
   "version": "1.0.0",
-  "description": "Online Time Tracker",
+  "description": "Employee Time Tracking System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "sqlite3": "^5.1.6"
+    "sqlite3": "^5.1.6",
+    "json2csv": "^6.0.0"
   }
 }
