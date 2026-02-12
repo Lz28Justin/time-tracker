@@ -17,6 +17,12 @@
             border-bottom: 2px solid #1e90ff;
         }
 
+        #liveClock {
+            font-size: 20px;
+            margin-top: 10px;
+            color: #1e90ff;
+        }
+
         .container {
             padding: 20px;
             max-width: 1200px;
@@ -124,6 +130,7 @@
 
 <header>
     <h1>Timekeeping Dashboard</h1>
+    <div id="liveClock"></div>
 </header>
 
 <div class="container">
@@ -144,7 +151,7 @@
     </div>
 
     <div class="clock-box">
-        <h2>Employee Time Clock</h2>
+        <h2>Time Clock</h2>
         <input type="text" id="name" placeholder="Enter your name" required>
         <br>
         <button onclick="clockIn()">Clock In</button>
@@ -179,6 +186,24 @@
 </div>
 
 <script>
+
+// LIVE DIGITAL CLOCK (12-hour format)
+function updateClock(){
+    const now = new Date();
+    let hours = now.getHours();
+    let minutes = now.getMinutes().toString().padStart(2,'0');
+    let seconds = now.getSeconds().toString().padStart(2,'0');
+    let ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    document.getElementById("liveClock").innerText =
+        `${hours}:${minutes}:${seconds} ${ampm}`;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
 
 function getCurrentDate(){
     return new Date().toISOString().split("T")[0];
