@@ -1,296 +1,304 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Time Tracking Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Timekeeping Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            background: #f4f6f9;
+        }
 
-<style>
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #0f172a;
-    color: white;
-}
+        header {
+            background: #1e3c72;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
 
-header {
-    background: #111827;
-    padding: 20px;
-    text-align: center;
-    font-size: 22px;
-    font-weight: bold;
-}
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
 
-.container {
-    padding: 20px;
-}
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
 
-.dashboard {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-}
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
 
-.card {
-    flex: 1;
-    min-width: 250px;
-    background: #1e293b;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-}
+        .card h2 {
+            margin: 10px 0;
+            color: #1e3c72;
+        }
 
-.card h3 {
-    margin: 0;
-    font-size: 14px;
-    color: #94a3b8;
-}
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
 
-.card p {
-    font-size: 24px;
-    margin-top: 10px;
-    font-weight: bold;
-}
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+        }
 
-input {
-    padding: 10px;
-    width: 90%;
-    max-width: 300px;
-    margin: 10px 0;
-    border-radius: 6px;
-    border: none;
-    background: #1e293b;
-    color: white;
-}
+        button {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
 
-button {
-    padding: 10px 16px;
-    margin: 5px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-}
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
 
-.clock-in { background: #16a34a; }
-.clock-out { background: #dc2626; }
-.download { background: #2563eb; }
-.delete-btn { background: #991b1b; padding: 6px 10px; }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background: #1e293b;
-}
+        th {
+            background: #1e3c72;
+            color: white;
+        }
 
-th, td {
-    padding: 10px;
-    text-align: center;
-}
+        /* Calendar */
 
-th {
-    background: #111827;
-}
+        .calendar {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
 
-tr:nth-child(even) {
-    background: #0f172a;
-}
-</style>
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar-day {
+            padding: 15px;
+            text-align: center;
+            border-radius: 6px;
+            background: #eee;
+        }
+
+        .present { background: #4CAF50; color: white; }
+        .absent { background: #e74c3c; color: white; }
+        .late { background: orange; color: white; }
+
+        .calendar-header {
+            font-weight: bold;
+        }
+
+    </style>
 </head>
 <body>
 
-<header>Time Tracking Dashboard</header>
+<header>
+    <h1>Timekeeping Dashboard</h1>
+</header>
 
 <div class="container">
 
-<div class="dashboard">
-    <div class="card">
-        <h3>Total Records</h3>
-        <p id="totalRecords">0</p>
+    <div class="cards">
+        <div class="card">
+            <h3>Total Records</h3>
+            <h2 id="totalRecords">0</h2>
+        </div>
+        <div class="card">
+            <h3>Total Hours</h3>
+            <h2 id="totalHours">0</h2>
+        </div>
+        <div class="card">
+            <h3>Monthly Attendance</h3>
+            <h2 id="monthlyAttendance">0</h2>
+        </div>
+        <div class="card">
+            <h3>Late Count</h3>
+            <h2 id="lateCount">0</h2>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>Total Hours</h3>
-        <p id="totalHours">0 hrs</p>
+    <form id="timeForm">
+        <input type="date" id="date" required>
+        <input type="time" id="timeIn" required>
+        <input type="time" id="timeOut" required>
+        <select id="status">
+            <option value="Present">Present</option>
+            <option value="Absent">Absent</option>
+        </select>
+        <button type="submit">Add Record</button>
+        <button type="button" onclick="downloadCSV()">Download CSV</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Status</th>
+                <th>Hours</th>
+                <th>Late?</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="records"></tbody>
+    </table>
+
+    <div class="calendar">
+        <h2>Monthly Calendar View</h2>
+        <div class="calendar-grid calendar-header">
+            <div>Sun</div><div>Mon</div><div>Tue</div>
+            <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div class="calendar-grid" id="calendarBody"></div>
     </div>
-</div>
-
-<div class="card" style="margin-top:20px;">
-    <h3>Weekly Attendance (Mon–Fri)</h3>
-    <canvas id="attendanceChart"></canvas>
-</div>
-
-<div style="text-align:center; margin-top:20px;">
-    <input type="text" id="name" placeholder="Enter Name"><br>
-    <button class="clock-in" onclick="clockIn()">Clock In</button>
-    <button class="clock-out" onclick="clockOut()">Clock Out</button>
-    <button class="download" onclick="downloadCSV()">Download CSV</button>
-</div>
-
-<table id="logTable">
-<tr>
-<th>Name</th>
-<th>Device</th>
-<th>Date</th>
-<th>Time In</th>
-<th>Time Out</th>
-<th>Hours</th>
-<th>Action</th>
-</tr>
-</table>
 
 </div>
 
 <script>
-const device = /Mobi|Android/i.test(navigator.userAgent) ? "Phone" : "Laptop";
-let chart;
 
-function clockIn() {
-    const name = document.getElementById("name").value.trim();
-    if (!name) return alert("Enter name");
+document.getElementById("timeForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+
+    await fetch("/add", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            date: date.value,
+            timeIn: timeIn.value,
+            timeOut: timeOut.value,
+            status: status.value
+        })
+    });
+
+    loadRecords();
+});
+
+async function loadRecords(){
+    const res = await fetch("/records");
+    const data = await res.json();
+
+    const table = document.getElementById("records");
+    table.innerHTML = "";
+
+    let totalHours = 0;
+    let lateCount = 0;
+    let monthlyAttendance = 0;
 
     const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    fetch("/clockin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            name,
-            device,
-            date: now.toLocaleDateString(),
-            time: now.toLocaleTimeString()
-        })
-    }).then(loadLogs);
+    data.forEach(record => {
+
+        const dateObj = new Date(record.date);
+
+        if(dateObj.getMonth() === currentMonth &&
+           dateObj.getFullYear() === currentYear &&
+           record.status === "Present"){
+            monthlyAttendance++;
+        }
+
+        const hours = record.hours || 0;
+        totalHours += hours;
+
+        let isLate = record.timeIn > "08:00";
+        if(isLate) lateCount++;
+
+        table.innerHTML += `
+            <tr>
+                <td>${record.date}</td>
+                <td>${record.timeIn}</td>
+                <td>${record.timeOut}</td>
+                <td>${record.status}</td>
+                <td>${hours}</td>
+                <td>${isLate ? "Yes" : "No"}</td>
+                <td><button onclick="deleteRecord(${record.id})">Delete</button></td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("totalRecords").innerText = data.length;
+    document.getElementById("totalHours").innerText = totalHours.toFixed(2);
+    document.getElementById("monthlyAttendance").innerText = monthlyAttendance;
+    document.getElementById("lateCount").innerText = lateCount;
+
+    buildCalendar(data);
 }
 
-function clockOut() {
-    const name = document.getElementById("name").value.trim();
-    if (!name) return alert("Enter name");
+function buildCalendar(data){
+
+    const calendar = document.getElementById("calendarBody");
+    calendar.innerHTML = "";
 
     const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
 
-    fetch("/clockout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            name,
-            device,
-            time: now.toLocaleTimeString()
-        })
-    }).then(loadLogs);
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for(let i=0; i<firstDay; i++){
+        calendar.innerHTML += `<div></div>`;
+    }
+
+    for(let day=1; day<=daysInMonth; day++){
+
+        const fullDate = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        let record = data.find(r => r.date === fullDate);
+
+        let className = "calendar-day";
+
+        if(record){
+            if(record.status === "Absent"){
+                className += " absent";
+            } else if(record.timeIn > "08:00"){
+                className += " late";
+            } else {
+                className += " present";
+            }
+        }
+
+        calendar.innerHTML += `<div class="${className}">${day}</div>`;
+    }
 }
 
-function downloadCSV() {
+async function deleteRecord(id){
+    await fetch("/delete/"+id, {method:"DELETE"});
+    loadRecords();
+}
+
+function downloadCSV(){
     window.location.href = "/download";
 }
 
-function deleteRecord(id) {
-    if (!confirm("Delete this record?")) return;
-    fetch("/delete/" + id, { method: "DELETE" }).then(loadLogs);
-}
+loadRecords();
 
-function calculateHours(timeIn, timeOut) {
-    if (!timeIn || !timeOut) return 0;
-
-    const start = new Date("1970-01-01T" + convertTo24Hour(timeIn));
-    const end = new Date("1970-01-01T" + convertTo24Hour(timeOut));
-
-    const diff = (end - start) / (1000 * 60 * 60);
-    return diff > 0 ? diff : 0;
-}
-
-function convertTo24Hour(timeStr) {
-    const d = new Date("1970-01-01 " + timeStr);
-    return d.toTimeString().split(" ")[0];
-}
-
-function getWeekDates() {
-    const now = new Date();
-    const day = now.getDay();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-
-    let week = [];
-    for (let i = 0; i < 5; i++) {
-        let date = new Date(monday);
-        date.setDate(monday.getDate() + i);
-        week.push(date.toLocaleDateString());
-    }
-    return week;
-}
-
-function generateChart(data) {
-    const weekDates = getWeekDates();
-    let presentDays = 0;
-
-    weekDates.forEach(day => {
-        const found = data.some(log => log.date === day);
-        if (found) presentDays++;
-    });
-
-    const absentDays = 5 - presentDays;
-
-    const ctx = document.getElementById("attendanceChart");
-
-    if (chart) chart.destroy();
-
-    chart = new Chart(ctx, {
-        type: "doughnut",
-        data: {
-            labels: ["Present", "Absent"],
-            datasets: [{
-                data: [presentDays, absentDays],
-                backgroundColor: ["#16a34a", "#dc2626"]
-            }]
-        }
-    });
-}
-
-function loadLogs() {
-    fetch("/logs")
-    .then(res => res.json())
-    .then(data => {
-
-        const table = document.getElementById("logTable");
-        table.innerHTML = `
-        <tr>
-            <th>Name</th>
-            <th>Device</th>
-            <th>Date</th>
-            <th>Time In</th>
-            <th>Time Out</th>
-            <th>Hours</th>
-            <th>Action</th>
-        </tr>`;
-
-        let totalHours = 0;
-
-        data.forEach(log => {
-            const hours = calculateHours(log.time_in, log.time_out);
-            totalHours += hours;
-
-            table.innerHTML += `
-            <tr>
-                <td>${log.name}</td>
-                <td>${log.device}</td>
-                <td>${log.date}</td>
-                <td>${log.time_in || "-"}</td>
-                <td>${log.time_out || "-"}</td>
-                <td>${hours.toFixed(2)}</td>
-                <td><button class="delete-btn" onclick="deleteRecord(${log.id})">Delete</button></td>
-            </tr>`;
-        });
-
-        document.getElementById("totalRecords").innerText = data.length;
-        document.getElementById("totalHours").innerText = totalHours.toFixed(2) + " hrs";
-
-        generateChart(data);
-    });
-}
-
-setInterval(loadLogs, 3000);
-loadLogs();
 </script>
 
 </body>
