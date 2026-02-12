@@ -2,12 +2,13 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Time Report</title>
+<title>Time Tracking Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     background: #0f172a;
     color: white;
 }
@@ -28,12 +29,11 @@ header {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
-    margin-bottom: 20px;
 }
 
 .card {
     flex: 1;
-    min-width: 200px;
+    min-width: 250px;
     background: #1e293b;
     padding: 20px;
     border-radius: 10px;
@@ -47,21 +47,16 @@ header {
 }
 
 .card p {
-    margin: 10px 0 0;
-    font-size: 22px;
+    font-size: 24px;
+    margin-top: 10px;
     font-weight: bold;
 }
 
-.input-section {
-    margin-bottom: 20px;
-    text-align: center;
-}
-
 input {
-    padding: 12px;
+    padding: 10px;
     width: 90%;
     max-width: 300px;
-    margin-bottom: 10px;
+    margin: 10px 0;
     border-radius: 6px;
     border: none;
     background: #1e293b;
@@ -69,7 +64,7 @@ input {
 }
 
 button {
-    padding: 10px 18px;
+    padding: 10px 16px;
     margin: 5px;
     border-radius: 6px;
     border: none;
@@ -85,9 +80,8 @@ button {
 table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px;
     background: #1e293b;
-    border-radius: 10px;
-    overflow: hidden;
 }
 
 th, td {
@@ -115,13 +109,19 @@ tr:nth-child(even) {
         <h3>Total Records</h3>
         <p id="totalRecords">0</p>
     </div>
+
     <div class="card">
         <h3>Total Hours</h3>
         <p id="totalHours">0 hrs</p>
     </div>
 </div>
 
-<div class="input-section">
+<div class="card" style="margin-top:20px;">
+    <h3>Weekly Attendance (Mon–Fri)</h3>
+    <canvas id="attendanceChart"></canvas>
+</div>
+
+<div style="text-align:center; margin-top:20px;">
     <input type="text" id="name" placeholder="Enter Name"><br>
     <button class="clock-in" onclick="clockIn()">Clock In</button>
     <button class="clock-out" onclick="clockOut()">Clock Out</button>
@@ -144,6 +144,7 @@ tr:nth-child(even) {
 
 <script>
 const device = /Mobi|Android/i.test(navigator.userAgent) ? "Phone" : "Laptop";
+let chart;
 
 function clockIn() {
     const name = document.getElementById("name").value.trim();
@@ -186,21 +187,64 @@ function downloadCSV() {
 
 function deleteRecord(id) {
     if (!confirm("Delete this record?")) return;
-
-    fetch("/delete/" + id, {
-        method: "DELETE"
-    }).then(loadLogs);
+    fetch("/delete/" + id, { method: "DELETE" }).then(loadLogs);
 }
 
 function calculateHours(timeIn, timeOut) {
     if (!timeIn || !timeOut) return 0;
 
-    const today = new Date().toLocaleDateString();
-    const start = new Date(today + " " + timeIn);
-    const end = new Date(today + " " + timeOut);
+    const start = new Date("1970-01-01T" + convertTo24Hour(timeIn));
+    const end = new Date("1970-01-01T" + convertTo24Hour(timeOut));
 
     const diff = (end - start) / (1000 * 60 * 60);
     return diff > 0 ? diff : 0;
+}
+
+function convertTo24Hour(timeStr) {
+    const d = new Date("1970-01-01 " + timeStr);
+    return d.toTimeString().split(" ")[0];
+}
+
+function getWeekDates() {
+    const now = new Date();
+    const day = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+
+    let week = [];
+    for (let i = 0; i < 5; i++) {
+        let date = new Date(monday);
+        date.setDate(monday.getDate() + i);
+        week.push(date.toLocaleDateString());
+    }
+    return week;
+}
+
+function generateChart(data) {
+    const weekDates = getWeekDates();
+    let presentDays = 0;
+
+    weekDates.forEach(day => {
+        const found = data.some(log => log.date === day);
+        if (found) presentDays++;
+    });
+
+    const absentDays = 5 - presentDays;
+
+    const ctx = document.getElementById("attendanceChart");
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: ["Present", "Absent"],
+            datasets: [{
+                data: [presentDays, absentDays],
+                backgroundColor: ["#16a34a", "#dc2626"]
+            }]
+        }
+    });
 }
 
 function loadLogs() {
@@ -240,6 +284,8 @@ function loadLogs() {
 
         document.getElementById("totalRecords").innerText = data.length;
         document.getElementById("totalHours").innerText = totalHours.toFixed(2) + " hrs";
+
+        generateChart(data);
     });
 }
 
