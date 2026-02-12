@@ -2,84 +2,138 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Online Time Tracker</title>
+<title>Employee Time Dashboard</title>
 
 <style>
 body {
-    background: #000;
-    color: white;
-    font-family: Arial;
-    text-align: center;
     margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+}
+
+header {
+    background: #111827;
+    padding: 20px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.container {
     padding: 20px;
 }
 
-h2 {
+.dashboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
     margin-bottom: 20px;
 }
 
-input, button {
-    width: 90%;
-    max-width: 320px;
-    padding: 12px;
-    margin: 8px 0;
-    font-size: 16px;
-    border-radius: 6px;
-    border: 1px solid #444;
+.card {
+    flex: 1;
+    min-width: 200px;
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+.card p {
+    margin: 10px 0 0;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.input-section {
+    margin-bottom: 20px;
+    text-align: center;
 }
 
 input {
-    background: #111;
+    padding: 12px;
+    width: 90%;
+    max-width: 300px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: none;
+    background: #1e293b;
     color: white;
 }
 
 button {
-    background: #222;
-    color: white;
+    padding: 10px 18px;
+    margin: 5px;
+    border-radius: 6px;
+    border: none;
     cursor: pointer;
-    transition: 0.3s;
+    font-weight: bold;
 }
 
-button:hover {
-    background: #333;
-}
+.clock-in { background: #16a34a; color: white; }
+.clock-out { background: #dc2626; color: white; }
+.download { background: #2563eb; color: white; }
 
 table {
     width: 100%;
-    margin-top: 20px;
     border-collapse: collapse;
-    font-size: 14px;
+    background: #1e293b;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 th, td {
-    border: 1px solid #333;
-    padding: 8px;
+    padding: 10px;
+    text-align: center;
 }
 
 th {
-    background: #111;
+    background: #111827;
+    font-size: 14px;
 }
 
-@media (max-width: 600px) {
-    table {
-        font-size: 12px;
+tr:nth-child(even) {
+    background: #0f172a;
+}
+
+@media (max-width: 768px) {
+    .dashboard {
+        flex-direction: column;
     }
 }
 </style>
 </head>
 <body>
 
-<h2>Online Time Tracker</h2>
+<header>Employee Time Tracking Dashboard</header>
 
-<input type="text" id="name" placeholder="Enter Name">
+<div class="container">
 
-<br>
+<div class="dashboard">
+    <div class="card">
+        <h3>Total Records</h3>
+        <p id="totalRecords">0</p>
+    </div>
+    <div class="card">
+        <h3>Total Hours</h3>
+        <p id="totalHours">0 hrs</p>
+    </div>
+</div>
 
-<button onclick="clockIn()">Clock In</button>
-<button onclick="clockOut()">Clock Out</button>
-<button onclick="downloadCSV()">Download CSV</button>
-
-<h3>Logs</h3>
+<div class="input-section">
+    <input type="text" id="name" placeholder="Enter Employee Name"><br>
+    <button class="clock-in" onclick="clockIn()">Clock In</button>
+    <button class="clock-out" onclick="clockOut()">Clock Out</button>
+    <button class="download" onclick="downloadCSV()">Download CSV</button>
+</div>
 
 <table id="logTable">
 <tr>
@@ -88,19 +142,18 @@ th {
 <th>Date</th>
 <th>Time In</th>
 <th>Time Out</th>
+<th>Hours</th>
 </tr>
 </table>
+
+</div>
 
 <script>
 const device = /Mobi|Android/i.test(navigator.userAgent) ? "Phone" : "Laptop";
 
-// Clock In
 function clockIn() {
     const name = document.getElementById("name").value.trim();
-    if (!name) {
-        alert("Enter your name");
-        return;
-    }
+    if (!name) return alert("Enter name");
 
     const now = new Date();
 
@@ -113,16 +166,12 @@ function clockIn() {
             date: now.toLocaleDateString(),
             time: now.toLocaleTimeString()
         })
-    }).then(() => loadLogs());
+    }).then(loadLogs);
 }
 
-// Clock Out
 function clockOut() {
     const name = document.getElementById("name").value.trim();
-    if (!name) {
-        alert("Enter your name");
-        return;
-    }
+    if (!name) return alert("Enter name");
 
     const now = new Date();
 
@@ -134,21 +183,30 @@ function clockOut() {
             device,
             time: now.toLocaleTimeString()
         })
-    }).then(() => loadLogs());
+    }).then(loadLogs);
 }
 
-// Download CSV
 function downloadCSV() {
     window.location.href = "/download";
 }
 
-// Load Logs
+function calculateHours(timeIn, timeOut) {
+    if (!timeIn || !timeOut) return 0;
+
+    const today = new Date().toLocaleDateString();
+    const start = new Date(today + " " + timeIn);
+    const end = new Date(today + " " + timeOut);
+
+    const diff = (end - start) / (1000 * 60 * 60);
+    return diff > 0 ? diff : 0;
+}
+
 function loadLogs() {
     fetch("/logs")
     .then(res => res.json())
     .then(data => {
-        const table = document.getElementById("logTable");
 
+        const table = document.getElementById("logTable");
         table.innerHTML = `
         <tr>
             <th>Name</th>
@@ -156,9 +214,15 @@ function loadLogs() {
             <th>Date</th>
             <th>Time In</th>
             <th>Time Out</th>
+            <th>Hours</th>
         </tr>`;
 
+        let totalHours = 0;
+
         data.forEach(log => {
+            const hours = calculateHours(log.time_in, log.time_out);
+            totalHours += hours;
+
             table.innerHTML += `
             <tr>
                 <td>${log.name}</td>
@@ -166,12 +230,15 @@ function loadLogs() {
                 <td>${log.date}</td>
                 <td>${log.time_in || "-"}</td>
                 <td>${log.time_out || "-"}</td>
+                <td>${hours.toFixed(2)}</td>
             </tr>`;
         });
+
+        document.getElementById("totalRecords").innerText = data.length;
+        document.getElementById("totalHours").innerText = totalHours.toFixed(2) + " hrs";
     });
 }
 
-// Auto refresh every 3 seconds
 setInterval(loadLogs, 3000);
 loadLogs();
 </script>
