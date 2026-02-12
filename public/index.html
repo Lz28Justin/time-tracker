@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Time Tracker</title>
+
+<style>
+body {
+    background: #000;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+input, button {
+    width: 90%;
+    max-width: 300px;
+    padding: 12px;
+    margin: 8px 0;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+input {
+    background: #111;
+    color: white;
+}
+
+button {
+    background: #222;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #333;
+}
+
+table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    border: 1px solid #333;
+    padding: 8px;
+}
+
+th {
+    background: #111;
+}
+</style>
+</head>
+<body>
+
+<h2>Online Time Tracker</h2>
+
+<input type="text" id="name" placeholder="Enter Name">
+
+<br>
+
+<button onclick="clockIn()">Clock In</button>
+<button onclick="clockOut()">Clock Out</button>
+
+<h3>Logs</h3>
+
+<table id="logTable">
+<tr>
+<th>Name</th>
+<th>Device</th>
+<th>Date</th>
+<th>Time In</th>
+<th>Time Out</th>
+</tr>
+</table>
+
+<script>
+const device = /Mobi|Android/i.test(navigator.userAgent) ? "Phone" : "Laptop";
+
+function clockIn() {
+    const name = document.getElementById("name").value.trim();
+    if (!name) return alert("Enter your name");
+
+    const now = new Date();
+
+    fetch("/clockin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name,
+            device,
+            date: now.toLocaleDateString(),
+            time: now.toLocaleTimeString()
+        })
+    }).then(() => loadLogs());
+}
+
+function clockOut() {
+    const name = document.getElementById("name").value.trim();
+    if (!name) return alert("Enter your name");
+
+    const now = new Date();
+
+    fetch("/clockout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name,
+            device,
+            time: now.toLocaleTimeString()
+        })
+    }).then(() => loadLogs());
+}
+
+function loadLogs() {
+    fetch("/logs")
+    .then(res => res.json())
+    .then(data => {
+        const table = document.getElementById("logTable");
+
+        table.innerHTML = `
+        <tr>
+            <th>Name</th>
+            <th>Device</th>
+            <th>Date</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+        </tr>`;
+
+        data.forEach(log => {
+            table.innerHTML += `
+            <tr>
+                <td>${log.name}</td>
+                <td>${log.device}</td>
+                <td>${log.date}</td>
+                <td>${log.time_in || "-"}</td>
+                <td>${log.time_out || "-"}</td>
+            </tr>`;
+        });
+    });
+}
+
+// Auto refresh every 3 seconds
+setInterval(loadLogs, 3000);
+loadLogs();
+</script>
+
+</body>
+</html>
