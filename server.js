@@ -1,8 +1,6 @@
-
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const { Parser } = require("json2csv");
-const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,7 +15,6 @@ db.run(`
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
-    device TEXT,
     date TEXT,
     time_in TEXT,
     time_out TEXT
@@ -26,11 +23,11 @@ CREATE TABLE IF NOT EXISTS logs (
 
 // CLOCK IN
 app.post("/clockin", (req, res) => {
-    const { name, device, date, time } = req.body;
+    const { name, date, time } = req.body;
 
     db.run(
-        "INSERT INTO logs (name, device, date, time_in) VALUES (?, ?, ?, ?)",
-        [name, device, date, time],
+        "INSERT INTO logs (name, date, time_in) VALUES (?, ?, ?)",
+        [name, date, time],
         function (err) {
             if (err) return res.status(500).json(err);
             res.json({ message: "Clocked In" });
@@ -40,7 +37,7 @@ app.post("/clockin", (req, res) => {
 
 // CLOCK OUT
 app.post("/clockout", (req, res) => {
-    const { name, device, time } = req.body;
+    const { name, time } = req.body;
 
     db.run(
         `UPDATE logs 
@@ -66,11 +63,9 @@ app.get("/logs", (req, res) => {
     });
 });
 
-// DELETE RECORD
+// DELETE
 app.delete("/delete/:id", (req, res) => {
-    const id = req.params.id;
-
-    db.run("DELETE FROM logs WHERE id = ?", [id], function (err) {
+    db.run("DELETE FROM logs WHERE id = ?", [req.params.id], function (err) {
         if (err) return res.status(500).json(err);
         res.json({ message: "Deleted" });
     });
@@ -81,8 +76,10 @@ app.get("/download", (req, res) => {
     db.all("SELECT * FROM logs", [], (err, rows) => {
         if (err) return res.status(500).json(err);
 
-        const fields = ["id", "name", "device", "date", "time_in", "time_out"];
-        const parser = new Parser({ fields });
+        const parser = new Parser({
+            fields: ["id", "name", "date", "time_in", "time_out"]
+        });
+
         const csv = parser.parse(rows);
 
         res.header("Content-Type", "text/csv");
