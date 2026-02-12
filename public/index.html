@@ -42,20 +42,24 @@
             color: #1e3c72;
         }
 
-        form {
+        .clock-box {
             background: white;
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 30px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
         }
 
-        input, select, button {
+        input {
             padding: 10px;
-            margin: 5px;
+            margin: 10px;
+            width: 200px;
         }
 
         button {
+            padding: 10px 20px;
+            margin: 10px;
             background: #1e3c72;
             color: white;
             border: none;
@@ -68,7 +72,6 @@
             border-collapse: collapse;
             background: white;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            margin-top: 20px;
         }
 
         th, td {
@@ -112,7 +115,6 @@
         .calendar-header {
             font-weight: bold;
         }
-
     </style>
 </head>
 <body>
@@ -133,30 +135,24 @@
             <h2 id="totalHours">0</h2>
         </div>
         <div class="card">
-            <h3>Monthly Attendance</h3>
-            <h2 id="monthlyAttendance">0</h2>
-        </div>
-        <div class="card">
             <h3>Late Count</h3>
             <h2 id="lateCount">0</h2>
         </div>
     </div>
 
-    <form id="timeForm">
-        <input type="date" id="date" required>
-        <input type="time" id="timeIn" required>
-        <input type="time" id="timeOut" required>
-        <select id="status">
-            <option value="Present">Present</option>
-            <option value="Absent">Absent</option>
-        </select>
-        <button type="submit">Add Record</button>
-        <button type="button" onclick="downloadCSV()">Download CSV</button>
-    </form>
+    <div class="clock-box">
+        <h2>Employee Time Clock</h2>
+        <input type="text" id="name" placeholder="Enter your name" required>
+        <br>
+        <button onclick="clockIn()">Clock In</button>
+        <button onclick="clockOut()">Clock Out</button>
+        <button onclick="downloadCSV()">Download CSV</button>
+    </div>
 
     <table>
         <thead>
             <tr>
+                <th>Name</th>
                 <th>Date</th>
                 <th>Time In</th>
                 <th>Time Out</th>
@@ -182,22 +178,49 @@
 
 <script>
 
-document.getElementById("timeForm").addEventListener("submit", async function(e){
-    e.preventDefault();
+function getCurrentDate(){
+    return new Date().toISOString().split("T")[0];
+}
+
+function getCurrentTime(){
+    return new Date().toTimeString().slice(0,5);
+}
+
+async function clockIn(){
+    const name = document.getElementById("name").value;
+    if(!name) return alert("Enter your name");
 
     await fetch("/add", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-            date: date.value,
-            timeIn: timeIn.value,
-            timeOut: timeOut.value,
-            status: status.value
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            name,
+            date:getCurrentDate(),
+            timeIn:getCurrentTime(),
+            timeOut:"",
+            status:"Present"
         })
     });
 
     loadRecords();
-});
+}
+
+async function clockOut(){
+    const name = document.getElementById("name").value;
+    if(!name) return alert("Enter your name");
+
+    await fetch("/clockout", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            name,
+            date:getCurrentDate(),
+            timeOut:getCurrentTime()
+        })
+    });
+
+    loadRecords();
+}
 
 async function loadRecords(){
     const res = await fetch("/records");
@@ -208,35 +231,22 @@ async function loadRecords(){
 
     let totalHours = 0;
     let lateCount = 0;
-    let monthlyAttendance = 0;
-
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
 
     data.forEach(record => {
 
-        const dateObj = new Date(record.date);
-
-        if(dateObj.getMonth() === currentMonth &&
-           dateObj.getFullYear() === currentYear &&
-           record.status === "Present"){
-            monthlyAttendance++;
-        }
-
-        const hours = record.hours || 0;
-        totalHours += hours;
+        totalHours += record.hours || 0;
 
         let isLate = record.timeIn > "08:00";
         if(isLate) lateCount++;
 
         table.innerHTML += `
             <tr>
+                <td>${record.name}</td>
                 <td>${record.date}</td>
-                <td>${record.timeIn}</td>
-                <td>${record.timeOut}</td>
+                <td>${record.timeIn || "-"}</td>
+                <td>${record.timeOut || "-"}</td>
                 <td>${record.status}</td>
-                <td>${hours}</td>
+                <td>${record.hours || 0}</td>
                 <td>${isLate ? "Yes" : "No"}</td>
                 <td><button onclick="deleteRecord(${record.id})">Delete</button></td>
             </tr>
@@ -245,7 +255,6 @@ async function loadRecords(){
 
     document.getElementById("totalRecords").innerText = data.length;
     document.getElementById("totalHours").innerText = totalHours.toFixed(2);
-    document.getElementById("monthlyAttendance").innerText = monthlyAttendance;
     document.getElementById("lateCount").innerText = lateCount;
 
     buildCalendar(data);
@@ -275,9 +284,7 @@ function buildCalendar(data){
         let className = "calendar-day";
 
         if(record){
-            if(record.status === "Absent"){
-                className += " absent";
-            } else if(record.timeIn > "08:00"){
+            if(record.timeIn > "08:00"){
                 className += " late";
             } else {
                 className += " present";
@@ -294,7 +301,7 @@ async function deleteRecord(id){
 }
 
 function downloadCSV(){
-    window.location.href = "/download";
+    window.location.href="/download";
 }
 
 loadRecords();
