@@ -71,23 +71,49 @@ app.delete("/delete/:id", (req, res) => {
     });
 });
 
-// DOWNLOAD CSV
+// DOWNLOAD CSV (With Computed Hours + 12hr Format)
 app.get("/download", (req, res) => {
     db.all("SELECT * FROM logs", [], (err, rows) => {
         if (err) return res.status(500).json(err);
 
-        const parser = new Parser({
-            fields: ["id", "name", "date", "time_in", "time_out"]
+        const formattedRows = rows.map(row => {
+
+            let totalHours = 0;
+
+            if (row.time_in && row.time_out) {
+                const inTime = new Date(`1970-01-01T${row.time_in}:00`);
+                const outTime = new Date(`1970-01-01T${row.time_out}:00`);
+                totalHours = ((outTime - inTime) / (1000 * 60 * 60)).toFixed(2);
+            }
+
+            function to12Hour(time) {
+                if (!time) return "";
+                let [hours, minutes] = time.split(":");
+                hours = parseInt(hours);
+                const ampm = hours >= 12 ? "PM" : "AM";
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                return `${hours}:${minutes} ${ampm}`;
+            }
+
+            return {
+                id: row.id,
+                name: row.name,
+                date: row.date,
+                time_in: to12Hour(row.time_in),
+                time_out: to12Hour(row.time_out),
+                total_hours: totalHours
+            };
         });
 
-        const csv = parser.parse(rows);
+        const parser = new Parser({
+            fields: ["id", "name", "date", "time_in", "time_out", "total_hours"]
+        });
+
+        const csv = parser.parse(formattedRows);
 
         res.header("Content-Type", "text/csv");
         res.attachment("time_records.csv");
         res.send(csv);
     });
-});
-
-app.listen(PORT, () => {
-    console.log("Server running on port " + PORT);
 });
