@@ -1,15 +1,17 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
-const cors = require("cors");
+const { Parser } = require("json2csv");
+const path = require("path");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
-app.use(cors());
 app.use(express.static("public"));
 
-const db = new sqlite3.Database("time_logs.db");
+const db = new sqlite3.Database("./database.db");
 
-// Create table
+// CREATE TABLE
 db.run(`
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,38 +23,41 @@ CREATE TABLE IF NOT EXISTS logs (
 )
 `);
 
-// Clock In
+// CLOCK IN
 app.post("/clockin", (req, res) => {
     const { name, device, date, time } = req.body;
 
     db.run(
-        `INSERT INTO logs (name, device, date, time_in)
-         VALUES (?, ?, ?, ?)`,
+        "INSERT INTO logs (name, device, date, time_in) VALUES (?, ?, ?, ?)",
         [name, device, date, time],
-        (err) => {
+        function (err) {
             if (err) return res.status(500).json(err);
             res.json({ message: "Clocked In" });
         }
     );
 });
 
-// Clock Out
+// CLOCK OUT
 app.post("/clockout", (req, res) => {
     const { name, device, time } = req.body;
 
     db.run(
-        `UPDATE logs
-         SET time_out = ?
-         WHERE name = ? AND device = ? AND time_out IS NULL`,
-        [time, name, device],
-        (err) => {
+        `UPDATE logs 
+         SET time_out = ? 
+         WHERE id = (
+             SELECT id FROM logs 
+             WHERE name = ? AND time_out IS NULL 
+             ORDER BY id DESC LIMIT 1
+         )`,
+        [time, name],
+        function (err) {
             if (err) return res.status(500).json(err);
             res.json({ message: "Clocked Out" });
         }
     );
 });
 
-// Get Logs
+// GET LOGS
 app.get("/logs", (req, res) => {
     db.all("SELECT * FROM logs ORDER BY id DESC", [], (err, rows) => {
         if (err) return res.status(500).json(err);
@@ -60,25 +65,30 @@ app.get("/logs", (req, res) => {
     });
 });
 
-// ✅ DOWNLOAD CSV
+// DELETE RECORD
+app.delete("/delete/:id", (req, res) => {
+    const id = req.params.id;
+
+    db.run("DELETE FROM logs WHERE id = ?", [id], function (err) {
+        if (err) return res.status(500).json(err);
+        res.json({ message: "Deleted" });
+    });
+});
+
+// DOWNLOAD CSV
 app.get("/download", (req, res) => {
-    db.all("SELECT * FROM logs ORDER BY id ASC", [], (err, rows) => {
+    db.all("SELECT * FROM logs", [], (err, rows) => {
         if (err) return res.status(500).json(err);
 
-        let csv = "Name,Device,Date,Time In,Time Out\n";
-
-        rows.forEach(row => {
-            csv += `${row.name},${row.device},${row.date},${row.time_in || ""},${row.time_out || ""}\n`;
-        });
+        const fields = ["id", "name", "device", "date", "time_in", "time_out"];
+        const parser = new Parser({ fields });
+        const csv = parser.parse(rows);
 
         res.header("Content-Type", "text/csv");
         res.attachment("time_records.csv");
         res.send(csv);
     });
 });
-
-// Render Port
-const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
     console.log("Server running on port " + PORT);
