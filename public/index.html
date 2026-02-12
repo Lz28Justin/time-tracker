@@ -110,7 +110,6 @@
             border-radius: 12px;
             text-align: center;
             border: 1px solid var(--border-color);
-            transition: 0.3s;
         }
 
         .card h2 {
@@ -211,3 +210,99 @@
 
     <div id="liveClock"></div>
 </header>
+
+<div class="container">
+
+    <div class="cards">
+        <div class="card">
+            <h3>Total Records</h3>
+            <h2 id="totalRecords">0</h2>
+        </div>
+        <div class="card">
+            <h3>Total Hours</h3>
+            <h2 id="totalHours">0</h2>
+        </div>
+        <div class="card">
+            <h3>Late Count</h3>
+            <h2 id="lateCount">0</h2>
+        </div>
+    </div>
+
+    <div class="clock-box">
+        <h2>Time Clock</h2>
+        <input type="text" id="name" placeholder="Enter your name" required>
+        <br>
+        <button onclick="clockIn()">Clock In</button>
+        <button onclick="clockOut()">Clock Out</button>
+        <button onclick="downloadCSV()">Download CSV</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Hours</th>
+                <th>Late?</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="records"></tbody>
+    </table>
+
+    <div class="calendar">
+        <h2>Monthly Calendar View</h2>
+        <div class="calendar-grid calendar-header">
+            <div>Sun</div><div>Mon</div><div>Tue</div>
+            <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div class="calendar-grid" id="calendarBody"></div>
+    </div>
+
+</div>
+
+<script>
+
+// Theme Toggle
+const toggle = document.getElementById("themeToggle");
+
+toggle.addEventListener("change", function() {
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme",
+        document.body.classList.contains("light") ? "light" : "dark"
+    );
+});
+
+window.addEventListener("load", function() {
+    const saved = localStorage.getItem("theme");
+    if(saved === "light"){
+        document.body.classList.add("light");
+        toggle.checked = true;
+    }
+});
+
+// LIVE CLOCK
+function updateClock(){
+    const now = new Date();
+    let hours = now.getHours();
+    let minutes = now.getMinutes().toString().padStart(2,'0');
+    let seconds = now.getSeconds().toString().padStart(2,'0');
+    let ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    document.getElementById("liveClock").innerText =
+        `${hours}:${minutes}:${seconds} ${ampm}`;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+loadRecords();
+
+</script>
+
+</body>
+</html>
